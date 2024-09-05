@@ -1,0 +1,101 @@
+---
+title: "t-test"
+author: "Amnist.O"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Assessment:
+The dataset EucalyptusTtest.csv contains information on heights (m) of trees of two species of Eucalyptus trees: E. cloeziana and E. dunnii.
+
+Use the t-test in R to test the hypothesis that: there is no difference in average height for the two species.
+
+You may find the following steps useful:
+
+ - Evaluate species-specific sample statistics and produce a boxplot. What do you see?
+ - Check the normality of samples. Does it matter in this situation? Why or why not?
+ - Perform the t-test and interpret the results.
+ - Try logging the response and repeating the above steps.
+ 
+```{r import data and packages, include = F, echo=FALSE}
+library(tidyverse)
+df <- read.csv("datasets/EucalyptusTtest.csv")
+```
+
+## Sample statistics and boxplot
+
+```{r}
+df$spp <- factor(df$spp)
+df %>%
+  ggplot(aes(x=spp,y=hgt,fill=spp))+
+  geom_boxplot()
+
+df %>%
+  reframe(across(hgt,list(n=length,mean=mean,sd=sd)),.by = spp) %>%
+            mutate(se = hgt_sd/sqrt(hgt_n),
+                   lo95 = hgt_mean-(1.96*se),
+                   hi95 = hgt_mean+(1.96*se)) %>%
+  column_to_rownames("spp") %>%
+  t() %>%
+  data.frame()
+```
+
+## Sample normality
+
+```{r qq plot}
+qqnorm(df$hgt[df$spp=="clo"],main="clo")
+qqline(df$hgt[df$spp=="clo"],col="turquoise3")
+qqnorm(df$hgt[df$spp=="dun"],main="dun")
+qqline(df$hgt[df$spp=="dun"],col="turquoise3")
+```
+
+## t-test of the sample
+
+```{r t-test}
+t.test(hgt~spp,data=df)
+```
+
+t-test shows that p-value = `r t.test(hgt~spp,data=df)$p.value` meaning that the difference in both sample means is not statistically significant. The 95% CI is `r t.test(hgt~spp,data=df)$conf.int[1:2]`.
+
+## Log-transformed of the sample
+
+Statistics and boxplot of log transformed data are as followed:
+
+```{r}
+df %>%
+  mutate(hgt = log(hgt)) -> ldf
+
+ldf %>%
+  reframe(across(hgt,list(n=length,mean=mean,sd=sd)),.by = spp) %>%
+            mutate(se = hgt_sd/sqrt(hgt_n),
+                   lo95 = hgt_mean-(1.96*se),
+                   hi95 = hgt_mean+(1.96*se)) %>%
+  column_to_rownames("spp") %>%
+  t() %>%
+  data.frame()
+
+ldf %>%
+  ggplot(aes(x=spp,y=hgt,fill=spp))+
+  geom_boxplot()
+```
+
+Normality of the log transformed data are displayed with qqnorm as followed:
+```{r}
+qqnorm(ldf$hgt[ldf$spp=="clo"],main="clo")
+qqline(ldf$hgt[ldf$spp=="clo"],col="lawngreen")
+qqnorm(ldf$hgt[ldf$spp=="dun"],main="dun")
+qqline(ldf$hgt[ldf$spp=="dun"],col="springgreen3")
+```
+
+Log transformed does not help that much.
+
+t-test of the log transformed data are as followed:
+```{r}
+t.test(hgt~spp,data=ldf)
+```
+
+Interpretting log transformed data need some extra calculation since the value are in log form. We just need to exponent them with natural number $e$ and their difference are percentage since it is $e^{log(a)-log(b)} = a/b$

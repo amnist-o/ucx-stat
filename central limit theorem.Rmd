@@ -1,0 +1,66 @@
+---
+title: "Central Limit Theorem"
+author: "Amnist.O"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Assessment: 
+The dataset EucalyptusTtest.csv contains information on heights (m) of trees of two species of Eucalyptus trees: E. cloeziana and E. dunnii.
+
+Do some exploratory analysis:
+
+ - Evaluate sample statistics for each species.
+ - Produce a histogram/density plot for each species.
+Use the Central Limit Theorem to produce
+ - the estimate
+ - the standard error
+ - the 95% confidence interval for the population mean height.
+
+```{r load data, echo=FALSE}
+library(tidyverse)
+df <- read.csv("datasets/EucalyptusTtest.csv")
+```
+
+```{r exploratory}
+df %>%
+  mutate(spp = factor(spp)) -> df
+
+summary(df)
+
+df %>%
+  reframe(across(hgt,list(mean=mean,sd=sd,n=length)),.by = spp) %>%
+            mutate(se = hgt_sd/sqrt(hgt_n),
+                   lo95 = hgt_mean-(1.96*se),
+                   hi95 = hgt_mean+(1.96*se)) %>%
+  column_to_rownames("spp") %>%
+  t() %>%
+  data.frame()
+  
+
+
+```
+
+Consider a seed germination experiment, in which 15 out of 20 seeds have germinated.
+
+Use CLT to produce:
+
+ - The estimate for the population proportion
+ - The associated standard error
+ - The 95% confidence interval
+ 
+```{r seed germination}
+seed <- c(rep(1,15),rep(0,5))
+
+cat("sample size =",length(seed),"\n")
+cat("sd = ",sd(seed),"\n")
+cat("mean = ",mean(seed),"\n")
+cat("se = ",sd(seed)/sqrt(length(seed)),"\n")
+cat("lo95 = ",mean(seed)-(1.96*sd(seed)/sqrt(length(seed))),"\n")
+cat("hi95 = ",mean(seed)+(1.96*sd(seed)/sqrt(length(seed))),"\n")
+```
+ 
