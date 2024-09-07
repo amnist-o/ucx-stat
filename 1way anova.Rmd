@@ -1,0 +1,50 @@
+---
+title: "1-way ANOVA"
+author: "Amnist.O"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Assessment:
+The file EucalyptiANOVA1.csv contains information on heights recorded for the trees of three species of Eucalyptus: E. cloeziana, E. pilularis and E. dunnii.
+
+Perform ANOVA to test whether the average population height for at least one of the species is different from the other two.
+
+```{r load package, include=F, echo=F}
+library(tidyverse)
+library(multcomp)
+```
+
+```{r load file}
+df <- read.csv("datasets/EucalyptiANOVA1.csv")
+df$spp <- factor(df$spp)
+sample_n(df,5)
+```
+
+ - Which sample has the highest mean height?
+```{r mean height}
+df %>%
+  reframe(across(hgt,list(n=length,mean=mean,sd=sd)),
+          .by=spp)
+```
+ Sample with highest mean is pil with height mean of `r tapply(df$hgt,df$spp,mean)["pil"]` meters.
+
+ - Do the residuals appear normally distributed?
+```{r residual}
+m1 <- lm(hgt ~ spp - 1,data = df)
+plot(m1,which = 2)
+```
+ From the plot, the residuals is not normally distributed at the tails.
+
+ - What is the p-value (4 decimals) of your F-test (number entry)?
+ 
+```{r}
+summary(update(m1,.~.+1))
+anova(update(m1,.~.+1))
+```
+
+ Number entry means include coefficient to the linear regression. From `anova`, we get p-value of the F test at 4 decimals equals to `r anova(update(m1,.~.+1))[1,5]`

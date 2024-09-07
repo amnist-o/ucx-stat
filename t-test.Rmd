@@ -98,4 +98,4 @@ t-test of the log transformed data are as followed:
 t.test(hgt~spp,data=ldf)
 ```
 
-Interpretting log transformed data need some extra calculation since the value are in log form. We just need to exponent them with natural number $e$ and their difference are percentage since it is $e^{log(a)-log(b)} = a/b$
+Interpreting log transformed data need some extra calculation since the value are in log form. We just need to exponent them with natural number $e$ and their difference are percentage since it is $e^{log(a)-log(b)} = a/b$

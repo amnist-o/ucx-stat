@@ -1,0 +1,31 @@
+---
+title: "Chi-Squared test"
+author: "Amnist.O"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Assessment:
+Use the data provided in the file LegoTable.csv to test whether the strength of emotion is associated with the emotion. (I.e., for example, do people, on average, perceive fear as more intense than sadness?)
+
+```{r load package and data, include=F, echo=F}
+library(tidyverse)
+df <- read.csv("datasets/LegoTable.csv")
+```
+
+List of emotions in the datasets
+
+```{r exploratory stats}
+table(df$emotion)
+table(df$strength,df$emotion)
+```
+
+Perform the chi-squared test to test whether strength of emotioni sassociated with the type of emotion
+```{r chi squared}
+chisq.test(df$strength,df$emotion)
+```
+

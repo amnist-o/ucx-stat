@@ -1,0 +1,71 @@
+---
+title: "Binomial Proportions"
+author: "Amnist.O"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Assessment:
+Clinical trials have several stages. The new treatment is initially tested on a very small group of subjects. If the results are promising, it is then tested on a larger group.
+
+In the initial stage, 10 people were given the old treatment, and another 10 people were given the new treatment. 6 got better in the old group and 8 in the new.
+
+In the second stage, 100 people were given the old treatment, and another 100 people were given the new treatment. 60 got better in the old group and 80 in the new.
+
+In the final stage, 1000 people were given the old treatment, and another 1000 people were given the new treatment. 600 got better in the old group and 800 in the new.
+
+```{r create data and load packages}
+library(tidyverse)
+matrix(
+  c(.6, .8, .40, .20),
+  nrow = 2,
+  byrow = F,
+  dimnames = list(c("old", "new"), c("T", "F"))
+) -> df
+df
+```
+
+## Comparing between statistical tests
+For prop.test
+```{r proptest}
+for(i in c(10, 100, 1000)) {
+  cat("sample size = ",i,"\n")
+  print(prop.test(df * i))
+}
+```
+
+For chi-squared test
+```{r chisq}
+for(i in c(10, 100, 1000)) {
+  cat("sample size = ",i,"\n")
+  print(chisq.test(df * i))
+}
+```
+
+For t-test
+```{r ttest}
+for(i in c(10, 100, 1000)) {
+  data.frame(group = rep(c("old","new"),each=i),
+             x = rep(c(0,1,0,1),c(0.4,0.6,0.2,0.8)*i))->dft
+  cat("sample size = ",i,"\n")
+  print(t.test(x~group,data=dft))
+}
+```
+
+
+Find the lowest sample size with mean of success rate = 0.6 for old drug and 0.8 for new drug that return significant result.
+```{r q3,warning=F}
+for(i in 10:100){
+  prop.test(df*i)$p.value -> x
+  if(x<0.05){
+    cat("sample size = ",i)
+    print(prop.test(df*i))
+    break
+  }
+}
+```
+
