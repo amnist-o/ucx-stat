@@ -11,10 +11,9 @@ A statistician has analysed correlation between height (cm) and weight
 $$\mathbb{E}(\text{Weight}) = -25 + 0.5 \cdot \text{Height}$$
 
 It means  
-1. each cm of height increased is associated (not cause) with an average
-(since it is $\mathbb{E}(Y|X)$) 500 g increased in weight. 2. expected
-weight of a 2 meters tall person is $-25 + 0.5 \times 200$ which is 75
-kg. 3. relationship between height and weight is approximately linear
+1. each cm of height increased is associated (not cause) with an average (since it is $\mathbb{E}(Y|X)$) 500 g increased in weight.  
+2. expected weight of a 2 meters tall person is $-25 + 0.5 \times 200$ which is 75 kg.  
+3. relationship between height and weight is approximately linear
 (according to this analysis)
 
 ## Assessment: Linearisation
