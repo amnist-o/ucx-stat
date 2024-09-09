@@ -1,0 +1,76 @@
+---
+title: "Empirical Sampling"
+author: "Amnist.O"
+date: "`r Sys.Date()`"
+output: rmarkdown::github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Assessment
+Sample the height of eucalyptus size of 5 and 20, 1000 times. Analyze the mean, median, standard deviation, and quantiles of each sampling.
+
+```{r sampling}
+df <- read.csv("datasets/Eucalyptus1_.csv")
+sample.df.5 <- list()
+sample.df.20 <- list()
+set.seed(1)
+for (i in 1:1000) {
+  sample.df.5[[i]] <- sample(df$hgt, size = 5, replace = F)
+  sample.df.20[[i]] <- sample(df$hgt, size = 20, replace = F)
+}
+```
+
+After we have sampled for 1000 times of size 5 and 20, we find the mean, median, sd, and quantiles of the samples.
+
+```{r sample statistic properties}
+rbind(sapply(sample.df.5,function(x) c(mean(x),median(x),sd(x),sum(x>15)/10,quantile(x,c(.025,.975)))),
+      sapply(sample.df.20,function(x) c(mean(x),median(x),sd(x),sum(x>15)/10,quantile(x,c(.025,.975))))) -> sample.df
+dimnames(sample.df) <- list(paste0(c("mean","median","sd","15m+","2.5%","97.5%"),rep(c(".5",".20"),each=6)))
+as.data.frame(t(sample.df)) -> sample.df
+```
+
+Now, we plot the statistic of each sampling
+
+```{r sampling plot}
+meanplot1 <- hist(
+  sample.df$mean.5,
+  main = "",
+  xlab = "mean height, m.",
+  col = "dodgerblue"
+)
+meanplot2 <- hist(sample.df$mean.20, col = "orange2")
+plot(
+  meanplot1,
+  main = "sample mean",
+  sub = "sample size 5 is blue, sample size 20 is orange",
+  xlab = "mean height, m.",
+  col = "dodgerblue"
+)
+plot(meanplot2, add = T, col = "orange2")
+
+medianplot1 <- hist(sample.df$median.5)
+medianplot2 <- hist(sample.df$median.20)
+plot(
+  medianplot1,
+  main = "sample median",
+  sub = "sample size 5 is blue, sample size 20 is orange",
+  xlab = "height, m.",
+  col = "dodgerblue"
+)
+plot(medianplot2, col = "orange2", add = T)
+
+sdplot1 <- hist(sample.df$sd.5)
+sdplot2 <- hist(sample.df$sd.20)
+plot(
+  sdplot1,
+  main = "sample sd",
+  sub = "sample size 5 is blue, sample size 20 is orange",
+  xlab = "height, m.",
+  col = "dodgerblue"
+)
+plot(sdplot2, col = "orange2", add = T)
+```
+
