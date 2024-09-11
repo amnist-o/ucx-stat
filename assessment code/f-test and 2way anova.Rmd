@@ -1,0 +1,85 @@
+---
+title: "F-test and 2-way ANOVA"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Assessment:
+Consider the data-set CuCC.csv. These data have been collected as part of the experiment to study the effect of copper (Cu) concentration on the growth of certain toxins.
+
+The data have been kindly provided by Dr. Francine Harland and is further described in Harland FM, Wood SA, Moltchanova E, Williamson WM, Gaw S. Phormidium autumnale growth and anatoxin-a production under iron and copper stress. Toxins. 2013 Dec;5(12):2504-21..
+
+The three variables in the data set are the copper concentration (Cu), day of the experiment, and the bacterial cell count (cc). The three levels of copper concentrations were 2.5  ppb, 25  ppb and 250  ppb respectively.
+
+```{r load package, message=FALSE}
+library(tidyverse)
+```
+
+```{r load data}
+dat <- read.csv("datasets/CuCC.csv")
+
+dat %>%
+  ggplot(aes(x=Day,y=CC))+
+  geom_point(aes(col = Cu))
+```
+
+In this analysis we will treat `Day` as a categorical variable, rather than a continuous one. Basically, we are saying that there is no parametric function suitable to describing the growth trajectory.
+
+```{r}
+dat %>%
+  mutate(d = factor(Day)) -> dat
+```
+
+## Research Question:
+The main question is: does copper concentration (statistically significantly) affect growth trajectory?
+
+The secondary question is: Does the highest copper concentration (Cu100 in the data file) provide statistically significantly smaller counts than either of the other two concentrations on day 49?
+
+### main question
+We should ran regression with output `CC` and input `Day` and `Cu` to see if copper concentration `Cu` affect the growth of bacteria `CC`.
+
+1. growth of bateria on days
+2. growth of bateria on days with shift in trajectory based on Cu
+3. growth of bateria on days with trajectory (slope) different for each Cu
+
+Since we are interested in the growth of bateria, we can use log-transform on `CC` for scaling and easier interpretation.
+
+```{r}
+m1 <- lm(log(CC) ~ d, data = dat)
+m2 <- update(m1,.~.+Cu)
+m3 <- update(m1,.~d*Cu)
+modelsummary::msummary(list(day=m1,additive = m2, interaction = m3),stars = T)
+```
+
+Let's plot the regression to diagnose any problem
+```{r}
+par(mfrow=c(3,4))
+plot(m1)
+plot(m2)
+plot(m3)
+```
+
+Now let's use F-test to test the addition variance explain of each model.
+```{r}
+anova(m1,m2,m3)
+```
+
+The result shows that the interaction term model is best describe the growth of bateria since the sum of sq is the highest.
+
+## secondary question
+We set reference level at day 49 by using `relevel`
+```{r}
+summary(update(m3,.~relevel(d,"49")*Cu))
+```
+
+The coefficient of `Cu100` indicated that highest copper concentration indeed provide statistically smaller bateria count than other two.
+
+## Graph for estimated growth trajectory
+```{r}
+visreg::visreg(m3,xvar = "d",by="Cu",overlay=T)
+```
+
