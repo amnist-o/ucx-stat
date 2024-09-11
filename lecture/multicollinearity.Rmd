@@ -1,0 +1,91 @@
+---
+title: "Multicollinearity"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Meaning
+Multicollinearity means input variables are highly correlated.
+
+Let's simulate an example.
+
+## Two perfectly linearly correlated inputs
+Generate a data set with two input variables $X_1$ and $X_2$ such that $X_1=X_2$, and an output variable $Y=X_1+X_2+\varepsilon$ where $\varepsilon \sim N(0,1)$.
+
+```{r}
+set.seed(20202020)
+x1 <- runif(100)
+x2 <- x1
+y <- x1+x2+rnorm(100)
+```
+
+Then fit the linear model:
+```{r}
+m <- lm(y~x1+x2)
+summary(m)
+```
+
+Coefficient for $X_2$ is not estimated. In the summary, we get a message saying 1 coefficient is not defined becase of singularities. This means the determinant of the estimated matrix is zero. In practice, it means that $X_1$ and $X_2$ is highly correlated and contain the same information.
+
+If $X_1=X_2$ the model becomes:
+
+$$
+\begin{aligned}
+\mathbb{E}(Y|X_1,X_2)&=\beta_0+\beta_1X_1+\beta_2X_2\\
+&=\beta_0+(\beta_1+\beta_2)X_1
+\end{aligned}
+$$
+From addition properties, there is an infinite number of combination of $\beta_1$ and $\beta_2$ which sum up to the same number and thus all equally valid.
+
+We can spot the perfect multicollinearity by looking at the plot of $X_1$ vs $X_2$
+```{r}
+plot(x1,x2)
+```
+
+and evaluate the correlation:
+```{r}
+cor(x1,x2)
+```
+
+## Three perfectly linearly correlated inputs
+But it is not going to be obvious as the example above. Let's try another example with three inputs
+
+```{r}
+
+```
+
+## Imperfect correlation
+When correlation is not quite 1, we will not see the NA and the warning in the model summary.
+
+Let's simulate another example:
+```{r}
+set.seed(20202020)
+x1 <- runif(100)
+x2 <- x1 + rnorm(100, 0, .1)
+y <- x1 + x2 + rnorm(100)
+
+cor(x1, x2)
+```
+
+Now the correlation is not exactly 1 but still very high. How does the model summary tell us?
+
+```{r}
+m <- lm(y~x1+x2)
+summary(m)
+```
+
+There is no any warnings for us. Neither of the variable is shown to have a statistically significant effect on the output. However, if we model just only 1 input:
+
+```{r}
+summary(update(m,.~x1))
+summary(update(m,.~x2))
+```
+
+## Conclusion
+Multicollinearity should be checked for at the outset, during the exploratory data analysis by looking at the pairwise correaltions between input variables. In `R`, we can use ggally or ggpair or just plot(dataframe) to plot the relationship between inputs.
+
+We can employ theory to rule which variables might be linearly dependent. For example, soil compositions are linearly dependent becase they always sum up to 100%.
