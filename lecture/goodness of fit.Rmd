@@ -1,0 +1,90 @@
+---
+title: "Googness of Fit"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Variance decomposition and $R^2$
+In ANOVA, we decompose sum of squared errors into the within group and between group elements.
+
+In linear models, we can decompose the observed variation into the part explained by the model and the part unexplained by the model:
+
+$$
+\sum_i(y_i-\bar{y})^2=\sum_i(\hat{y}_i-\bar{y})^2+\sum_i(y_i-\hat{y}_i)^2
+$$
+
+where $\hat{y}_i$ is the model prediction.
+
+If the model is good then the part that is explained by the model should be close to the observed variation.
+
+$$
+R^2 = \frac{\sum_i(\hat{y}_i-\bar{y})^2}{\sum_i(y_i-\bar{y})^2}
+$$
+
+So, higher $R^2$, the better the model is.
+
+Note: $R^2$ says nothing about the complexity of the model like number of parameters. Therefore, it is not particularly good for comparing models with different parameters.
+
+## Further variance decomposition
+Total variance explained is equals to variance explained by variable 1 + variance explained further by variable 2 and so on. So adding a variable might resulted in small addition in variance explained due to numeric correlation.
+
+When we have multicollinearity, variance further explained by variable 2 is 0. Thus, variables may appear significant on their own but not together.
+
+Let's simulate some data
+```{r}
+set.seed(20202020)
+x1 <- runif(20)
+x2 <- x1+ rnorm(20,0,.1)
+y <- x1+.01*x2+rnorm(20,0,.05)
+m <- lm(y~x1+x2)
+summary(m)
+anova(m)
+```
+
+The `Sum Sq` shows the sum of squares decomposition. We can see that $X_1$ explains $\frac{1.2326}{1.2326+0.00448+0.04265}\approx 96\%$ of the total variation.
+
+What if we change the order?
+```{r}
+anova(update(m,.~x2+x1))
+```
+
+Now, contribution of $X_2$ is fairly large at $\frac{1.1290}{1.1290+0.10883+0.04265}\approx 88\%$. The contribution of $X_1$ is smaller because once $X_2$ is added there is less variation to explain. However, the residuals sum of squared does not change.
+
+## Nested models
+Nested models can be compared using F-test. Same as for ANOVA. Nested model is model that contains all the variables of the others.
+
+$$
+\begin{aligned}
+\text{nested} \\
+Y&=\beta_0+\beta_1X_1+\beta_2X_2 \\
+Y&=\beta_0+\beta_1X_1 \\
+\text{not nested} \\
+Y&=\beta_0+\beta_1X_1+\beta_2X_2 \\
+Y&=\beta_0+\beta_1X_1X_2
+\end{aligned}
+$$
+
+## An F-test
+Let's compare 2 models with ANOVA:
+```{r}
+m1 <- lm(y~x1+x2)
+m2 <- lm(y~x1)
+anova(m1,m2)
+```
+
+`Pr(>F)` more than 0.05 means that the two models are not statistically significantly different. We should use the model with lesser variables.
+
+F-test is useful when two models are different in more than one term
+```{r}
+anova(m1,update(m2,.~x1*x2))
+```
+
+If you compare non-nested model. R will produce the result but you will not see the p value. R will not prevent any misuse of the command since the responsibility lies with us.
+```{r}
+anova(m2,update(m2,.~x2))
+```
+
