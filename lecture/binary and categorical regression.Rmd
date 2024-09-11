@@ -1,0 +1,114 @@
+---
+title: "Non continuous input in linear regression"
+author: "Amnist.O"
+date: "`r Sys.Date()`"
+output: rmarkdown::github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Simple linear regression with binary input
+Let's look at Nancy Howell's anthropological data of height and sex for subjects aged at least 18
+```{r load package, message=FALSE}
+library(tidyverse)
+```
+
+```{r load and prep data}
+df <- read.csv("datasets/howell1.csv",sep = ";")
+df %>%
+  filter(age >= 18) -> df
+```
+
+```{r plot}
+plot(df$male,df$height,
+     xlab = "is male",
+     ylab = "Height (cm)")
+```
+
+We can see that sex is a binary variable which is 1 when the subject is male and 0 otherwise.
+
+Recall the regression model:
+$$\mathbb{E}(Y|X) = \beta_0+\beta_1X$$
+Interpretation of $\beta_1$ coefficient is the expected change in $Y$ associated with 1 unit change in $X$.
+
+But if we fit $Y$ as height and $X$ as sex, what is the meaning of 1 unit change in sex?
+
+Since $X$ is a binary variable. The expected value of $Y$ given $X$ or $\mathbb{E}(Y|X)$ is a binary variable as well:
+$$
+\begin{aligned}
+\mathbb{E}(Y|X=0)&=0 \\
+\mathbb{E}(Y|X=1)&=\beta_0+\beta_1
+\end{aligned}
+$$
+Therefore, the interpretation of $\beta_1$ is a difference in expected heights for men and women.
+
+Let's try to fit the model and check assumptions.
+```{r model}
+m1 <- lm(height ~ male, data = df)
+par(mfrow=c(2,2))
+plot(m1)
+```
+
+There seems to be no explicit problem from the plots. Next, let's take a look at summary.
+```{r summary}
+summary(m1)
+```
+
+We can interpret $\beta_1$ as men are on average taller than women by `r m1$coefficients[2]` cm with p value < 0.0001
+
+We have learned that there is a statistical test for testing difference in mean, the t-test. Let's try using t-test to find whether men are taller than women on average.
+```{r t test}
+t.test(height~male,data = df, var.equal = T)
+```
+
+We can see that t-statistic from t.test `r t.test(height ~ male, data = df, var.equal = T)$statistic` is equal to male t-statistic from regression `r summary(m1)$coefficients[6]` but with a different sign due to order (female - male and male - female).
+
+Simple regression with binary independent variable is identical to t-test with equal variance assumption.
+
+## Simple linear regression with categorical input
+What if the variable is categorical with more than 2 possible values such as jobs, income class, species. Let's take a look at Eucalyptus data with 3 species.
+
+```{r eucalyptus}
+df.eu <- read.csv("datasets/EucalyptiANOVA1.csv")
+```
+
+```{r plot euca}
+boxplot(hgt ~ spp,data=df.eu,
+        ylab = "Height (m)",
+        xlab = "Species")
+```
+
+We cannot just code each species as 1, 2, and 3 since it will imply particular order ( $1<2<3$ ) and particular relationship such as $1+2=3$
+
+We create new variables: dummy variables $D_1$ and $D_2$ as binary variables for each species:
+$$
+\begin{aligned}
+D_1 &=1 \space \text{if species = dun, 0 otherwise} \\
+D_2 &=1 \space \text{if species = pil, 0 otherwise}
+\end{aligned}
+$$
+
+Table for each species are:
+
+|Species|$D_1$|$D_2$|
+|---|---|---|
+|clo|0|0|
+|dun|1|0|
+|pil|0|1|
+
+Now our linear regression looks like this:
+$$\mathbb{E}(Y|D_1,D_2)=\beta_0+\beta_1D_1+\beta_2D_2$$
+
+R automatically treat `chr` or `fct` variable as categorical and create dummy variables for you.
+
+Let's fit the model
+```{r lm}
+m.e <- lm(hgt ~ spp, data = df.eu)
+summary(m.e)
+```
+
+Since we did not define factor levels for species, `R` arranges it alphabetically.
+
+This is the same as doing ANOVA as binary input regression is the same as t-test.
