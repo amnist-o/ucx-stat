@@ -1,0 +1,30 @@
+---
+title: "ANCOVA"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## ANCOVA
+ANOVA but there are other variables in the model which we need to account for.
+
+Basically, it is that we want to compare not only the variables we are interested in but all the variables that affect the output. Take a look at weight and height data:
+
+```{r load package, message=FALSE}
+library(tidyverse)
+```
+
+```{r}
+dat <- read.csv("datasets/howell1.csv",sep=";")
+dat %>%
+  filter(age >= 18) %>%
+  mutate(male = factor(male)) -> dat
+m1 <- lm(weight ~ height, data = dat)
+m2 <- update(m1, .~height*male)
+anova(m1,m2)
+```
+
+In this case, we do not spot statistically significant differences between the sex in weight after adjusting for height.
