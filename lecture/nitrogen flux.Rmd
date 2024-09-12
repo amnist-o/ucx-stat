@@ -1,0 +1,66 @@
+---
+title: "U613 Code"
+author: "Elena Moltchanova"
+date: "17/9/2020"
+---
+```{r}
+# generate some data:
+set.seed(20202020)
+x <- rep(6:18,5)
+mu <- 2.5 - .15*(x-10)^2
+y <- exp(mu+rnorm(13*5,0,1))
+
+# ... and plot it
+plot(x,y,xlab='Time (h)', ylab='N2O flux (ng/cm2/h)',pch=16,col='blue')
+
+
+# log it and plot it
+plot(x,log(y),xlab='Time (h)', ylab='logged N2O flux (ng/cm2/h)',pch=16,col='blue')
+
+# fit a quadratic model 
+m1 <- lm(log(y) ~ x + I(x^2))
+
+# and plot the curve
+curve(m1$coef[1] + m1$coef[2]*x + m1$coef[3]*x^2, add=T,col='red',lwd=2)
+
+plot(x,log(y),xlab='Time (h)', ylab='logged N2O flux (ng/cm2/h)',pch=16,col='blue')
+
+m1 <- lm(log(y) ~ x + I(x^2))
+
+curve(m1$coef[1] + m1$coef[2]*x + m1$coef[3]*x^2, add=T,col='red',lwd=2)
+```
+## Bootstrap
+
+```{r}
+# bootstrap for the 65 observations
+
+# number of bootstrapped samples
+B <- 1000
+
+# a vector to record the estimated ratio(location of the maximum)
+ratio.est <- numeric(B)
+
+# setting seed
+set.seed(20202020)
+for(b in 1:B){
+  # resampling observations
+  is.in <- sample(1:65,size=65,replace=T)
+  # fitting the model
+  m <- lm(log(y)[is.in] ~ x[is.in]+I(x[is.in]^2))
+  # recording the location of the maximum
+  ratio.est[b] <- -m$coef[2]/2/m$coef[3]
+}
+
+hist(ratio.est,xlab='x*',col='plum',main='')
+
+
+### the bootstrap estimates:
+# mean
+mean(ratio.est)
+
+# standard error
+sd(ratio.est)
+
+# 95% CI
+quantile(ratio.est,c(0.025,.975))
+```
