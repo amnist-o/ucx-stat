@@ -1,4 +1,4 @@
-Googness of Fit
+Goodness of Fit
 ================
 2024-09-11
 
