@@ -86,7 +86,7 @@ anova(m)
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 The `Sum Sq` shows the sum of squares decomposition. We can see that
-$X_1$ explains $\frac{1.2326}{1.2326+0.00448+0.04265}\approx 96\%$ of
+$X_1$ explains $\frac{1.2326}{1.2326+0.00448+0.04265}\approx 96\\%$ of
 the total variation.
 
 What if we change the order?
@@ -106,7 +106,7 @@ anova(update(m,.~x2+x1))
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 Now, contribution of $X_2$ is fairly large at
-$\frac{1.1290}{1.1290+0.10883+0.04265}\approx 88\%$. The contribution of
+$\frac{1.1290}{1.1290+0.10883+0.04265}\approx 88\\%$. The contribution of
 $X_1$ is smaller because once $X_2$ is added there is less variation to
 explain. However, the residuals sum of squared does not change.
 
