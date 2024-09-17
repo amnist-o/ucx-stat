@@ -184,7 +184,7 @@ summary(update(m,.~x2))
 ## Conclusion
 
 Multicollinearity should be checked for at the outset, during the
-exploratory data analysis by looking at the pairwise correaltions
+exploratory data analysis by looking at the pairwise correlations
 between input variables. In `R`, we can use ggally or ggpair or just
 plot(dataframe) to plot the relationship between inputs.
 
