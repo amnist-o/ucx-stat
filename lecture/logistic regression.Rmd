@@ -1,0 +1,97 @@
+---
+title: "Logistic regression"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load data
+We look at chase data. Chase is a game where two teams (chaser and runner) compete by answering quizes within time limit. If the chaser can correctly answer more quizes than the runner team, they win. Chase data consists of number of questions the runner can correctly answer and whether they win or not.
+
+```{r load packages, message=FALSE}
+library(tidyverse)
+```
+
+```{r load data}
+chase <- readr::read_lines(file = "datasets/chase")
+df <- read.table(file = chase, header = T, sep = ",")
+```
+
+## Create a logistic model
+
+```{r logistic model m}
+m <- glm(Win ~ TeamScore, data = df, family = "binomial"(link = "logit"))
+summary(m)
+```
+
+Interpretation of the regression is that for 1 unit change in $x$ which in this case is TeamScore, resulted in `r coef(m)[2]` unit change in log odds which is $\log\left(\frac{p}{1-p}\right)$. 
+
+Confident interval can be found using `confint`
+
+```{r}
+confint(m)
+```
+
+Remember that the interpretation is log odds. To convert back refer to log linear interpretation markdown.
+
+```{r}
+scales::percent(exp(confint(m)[2,])-1,accuracy = 1e-6)
+```
+
+## Create plots
+Estimated curve can be plotted with following codes:
+
+```{r}
+plot(df$TeamScore,jitter(df$Win),
+     xlab='Team Score',ylab='Probability of Winning',yaxt='n')
+abline(h=0,col='gray');abline(h=1,col='gray')
+axis(2,at=0:1,c('Lose','Win'))
+# add logit curve
+curve(1/(1+exp(-(m$coef[1]+m$coef[2]*x))),col='red',lwd=2,add=T)
+```
+
+Prediction curve can be plotted with a tweak in the code:
+```{r}
+plot(df$TeamScore,jitter(df$Win),
+     xlab='Team Score',ylab='Probability of Winning',yaxt='n')
+abline(h=0,col='gray');abline(h=1,col='gray')
+axis(2,at=0:1,c('Lose','Win'))
+
+# predict the response with predict and type of predict is response or predict will return the probability
+d.predict <- data.frame(TeamScore=0:30)
+d.predict$PWin <- predict(m,newdata=d.predict, type="response")
+
+lines(d.predict$TeamScore, d.predict$PWin, col='red',lwd=2)
+```
+
+Confident interval envelope can be plotted with:
+```{r}
+plot(df$TeamScore,jitter(df$Win),
+     xlab='Team Score',ylab='Probability of Winning',yaxt='n')
+abline(h=0,col='gray');abline(h=1,col='gray')
+axis(2,at=0:1,c('Lose','Win'))
+
+d.predict <- data.frame(TeamScore=0:30)
+
+# mean for the prediction (on logit scale)
+d.predict$MEAN <- predict(m,newdata=d.predict, type="link")
+
+# standard error for the prediction (on logit scale)
+d.predict$SE <- predict(m,newdata=d.predict, type="link", se.fit=T)$se.fit
+
+d.predict$PWin <- 1/(1+exp(-d.predict$MEAN))
+
+# 95% CI limits:
+d.predict$PWin.Lo <- 1/(1+exp(-(d.predict$MEAN-1.96*d.predict$SE)))
+d.predict$PWin.Hi <- 1/(1+exp(-(d.predict$MEAN+1.96*d.predict$SE)))
+
+
+
+lines(d.predict$TeamScore, d.predict$PWin, col='salmon',lwd=2)
+lines(d.predict$TeamScore, d.predict$PWin.Lo, col='red',lwd=2,lty=3)
+lines(d.predict$TeamScore, d.predict$PWin.Hi, col='red',lwd=2,lty=3)
+```
+
