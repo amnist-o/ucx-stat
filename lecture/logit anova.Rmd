@@ -1,0 +1,83 @@
+---
+title: "ANOVA on logistic regression"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,fig.path="logistic anova/")
+```
+
+## ANOVA for binary response
+Let's look at the chaser data. Actually, we have 5 different chasers. Let's see if the chaser has any effect on the odds of winning.
+
+```{r load packages, message=FALSE}
+library(tidyverse)
+library(multcomp)
+```
+
+```{r load data}
+chase <- read_lines(file = "datasets/chase")
+df <- read.table(file = chase, header = T, sep = ",", stringsAsFactors = T)
+summary(df)
+```
+
+```{r model}
+m <- glm(Win ~ Chaser, data = df,
+         family = "binomial"(link = "logit"))
+summary(m)
+```
+
+From the coefficients, we can see that odds of winning differs by chaser. But is the difference statistically significant? Let's use `anova` to test the hypothesis of
+
+$$
+H_0: p_1 = p_2 = \dots = p_n
+$$
+against
+
+$$
+H_1: \text{there is at least one group that is different from the others}
+$$
+
+```{r anova}
+anova(update(m,.~1),m,test = "Chisq")
+```
+
+The anova test confirms that there is at least one group that is different from the others. So the chaser affect the odds of winning. Let's dig deeper to determine how.
+
+```{r multcomp}
+g <- glht(m,linfct = mcp(Chaser = "Tukey"))
+summary(g)
+```
+
+Let's assign the letter so we can easily interpret the result.
+```{r cld}
+g.letter <- cld(g)$mcletters$monospacedLetters
+g.letter
+```
+
+We can also show all chaser name by remove the intercept:
+```{r no intercept}
+m0 <- update(m,.~.-1)
+summary(m0)
+```
+
+Let's plot the probability of winning against each chaser. Remember the probability is obtained by using inverse function of logit.
+
+```{r probability,message=FALSE,warning=FALSE}
+expit <- function(x){1/(1+exp(-x))}
+# confidence intervals
+m.ci <- confint(m0)
+my.df <- data.frame(Chaser = substr(rownames(m.ci),7,11),
+                  p.est = expit(m0$coef),
+                  p.lo = expit(m.ci[,1]),
+                  p.hi = expit(m.ci[,2]))
+
+
+plot(1:5, my.df$p.est, pch=16, ylim=c(0,1),xlim=c(0,6),
+     xaxt='n',xlab='',ylab='Probability of Winning')
+axis(1,1:5,my.df$Chaser)
+arrows(1:5,my.df$p.lo,1:5,my.df$p.hi,angle=90,length=.01,lwd=2,code=3)
+text(1:5,.8,g.letter)
+```
+
