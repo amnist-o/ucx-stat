@@ -1,0 +1,94 @@
+---
+title: "Logistic ANCOVA"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,fig.path = "logit-ancova_files/")
+```
+
+Let's step up and try to fit real model. Refer to the chase data, we are going to include team score and the chaser to the model.
+
+```{r load packages, message=FALSE}
+library(tidyverse)
+library(multcomp)
+library(ggpubr)
+```
+
+```{r load data and fit initial model}
+chase <- read_lines(file = "datasets/chase")
+df <- read.table(file = chase, header = T, sep = ",", stringsAsFactors = T)
+
+m <- glm(Win ~ TeamScore * Chaser, data = df,
+         family = "binomial"(link = "logit"))
+
+summary(m)
+```
+
+The output is overwhelming. Let's ask a question so we know what to look for.
+
+## Does the outcome depend on the chaser at all?
+We will use the ANCOVA (analysis of variance with covariates). We want to know if the chaser affect the odds of winning. However, we want to include the effect of team score as well. So, we compare the model that include the chasers and team score with the model with just team score.
+
+```{r ancova}
+anova(update(m,.~TeamScore),m,test = "Chisq")
+```
+
+We can see that the model is statistically different from each other. Thus, the chaser identity matters.
+
+## Does the shape of estimated win probability depend on the chaser?
+If the model is additive, the curves will just shift left and right (due to the nature of the function). If the model is multiplicative (with interactions), the curves might be different. Let's see what they look like.
+
+```{r interaction plot}
+my.df <- data.frame(expand.grid(Chaser=unique(df$Chaser),TeamScore=1:30))
+
+my.df$P.est <- predict(m,my.df,type='response')
+
+(my.df %>%
+  ggplot(aes(x=TeamScore,y=P.est))+
+  geom_line(aes(group=Chaser,col=Chaser),linewidth=1.5)+
+  ylab("Estimated Probability of Winning")+theme_bw()+
+  ggtitle('With interaction') -> g.int)
+```
+
+Now, let's plot the additive one:
+```{r additive curve}
+m.add <- update(m,.~TeamScore+Chaser)
+
+my.df$P.est.add <- predict(m.add,my.df,type='response')
+
+(my.df %>%
+  ggplot(aes(x=TeamScore,y=P.est.add))+
+  geom_line(aes(group=Chaser,col=Chaser),size=1.5)+
+  ylab("Estimated Probability of Winning")+theme_bw()+
+  ggtitle('Additive') -> g.add)
+```
+
+```{r plot together}
+ggarrange(g.int,g.add,nrow=1,
+          common.legend = T)
+```
+
+What does the figure tell us? Besides the difference in shape, we are not sure. We don't know if the difference is significant. So let's use statistical test to answer the question.
+
+```{r f test}
+anova(m,m.add,test = "Chisq")
+```
+
+Apparently, the effect of teamscore does not depend on chaser. $p = `r anova(m,m.add,test="Chisq")[2,5]`$
+
+With the result, we can interpret additive model which is easier.
+```{r summary madd}
+summary(m.add)
+```
+
+The effect of additional point in team score increase the odds of winning by `r scales::percent(exp(0.37390)-1,0.0001)`. Odds of winning against Jenny is `r exp(1.02)` smaller than odds of winning against Anne.
+
+## Default category
+Like linear regression with categorical variables, we can change the reference level by using `relevel`.
+
+```{r relevel to mark}
+update(m.add,.~TeamScore + relevel(Chaser,"Mark")) %>%
+  summary()
+```

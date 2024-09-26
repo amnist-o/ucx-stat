@@ -1,0 +1,66 @@
+---
+title: "Perform ANOVA for binary response"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Assessment
+Seed vaults are places where seeds are kept in case of losses of genetic and bio-diversity resulting from diseases, wars and other catastrophic events. The seeds within may be stored for years or even decades. It is good to know that the seeds will still be viable after all this time. And it is important to understand what storage regime works best for each seed variety.
+
+Below is the result of a germination experiment. Where 4 different pre-storage treatments were applied to seeds. 
+
+|Treatment|Germinated|Total|
+|---|---|---|
+|A|3|40|
+|B|25|40|
+|C|39|40|
+|D|19|40|
+
+Test whether the germination rate differs between treatments. If on the verified track you will be able to check your results by answering the questions that follow.
+
+```{r load packages, message=FALSE}
+library(tidyverse)
+library(multcomp)
+```
+
+What is the best treatment?
+
+```{r create dataframe and model}
+df <- data.frame(treatment = LETTERS[1:4],
+                 germinated = c(3,25,39,19),
+                 total = rep(40,4))
+# make it to factor to use in multcomp
+df$treatment <- factor(df$treatment)
+
+# create a model with cbind since we do not have each attempt. exclude the intercept so we can interpret the result easily.
+m <- glm(cbind(germinated,total-germinated) ~ treatment, data = df,
+         family = "binomial"(link = "logit"))
+
+summary(m)
+```
+
+ - We can see that the best treatment is C.
+
+Is it statistically better than any others?
+
+```{r find difference}
+anova(m, test = "Chisq")
+
+glht(m,linfct = mcp(treatment = "Tukey")) %>%
+  summary()
+
+glht(m,linfct = mcp(treatment = "Tukey")) %>%
+  cld()
+```
+
+ - We can see that the best treatment C is clearly different from others.
+
+Is treatment B statistically better than treatment D?
+ - From the pairwise comparison of mean, we can see that treatment B and treatment D is in the same group. Thus treatment B is not statistically better than treatment D.
+ 
+What is the p-value for the hypothesis: Treatment B is different from treatment D?
+ - From the multiple comparisons of means, at D - B == 0 has p value around 0.51517.

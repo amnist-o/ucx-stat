@@ -1,0 +1,44 @@
+---
+title: "Bernoulli vs Binomial"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Logistic regression with summary data
+
+```{r load packages, message=FALSE}
+library(tidyverse)
+library(multcomp)
+```
+
+```{r load data}
+chase <- read_lines(file = "datasets/chase")
+df <- read.table(file = chase, header = T, sep = ",", stringsAsFactors = T)
+df %>%
+  reframe(Wins = sum(Win),
+          Total = length(Win),
+          .by = Chaser) %>%
+  arrange(Chaser) -> df.sum
+df.sum
+```
+
+Let's fit logistic regression on `df.sum`
+
+```{r logit dfsum}
+m.sum <- glm(cbind(Wins, Total - Wins) ~ Chaser, data = df.sum,
+             family = "binomial"(link = "logit"))
+summary(m.sum)
+```
+
+compare with original model:
+```{r model}
+m <- glm(Win ~ Chaser,data = df,
+         family = "binomial"(link = "logit"))
+summary(m)
+```
+
+We can see that the model is the same. This means `cbind(Wins,Total-Wins)` in `glm` is equal to $\log\left(\frac{p(win)}{1-p(win)}\right)$. Thus the result is the same as original model. This helps us to specify the model with different types of data.
