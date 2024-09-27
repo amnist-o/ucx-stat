@@ -9,13 +9,15 @@ standard cumulative normal density function:
 
 $$
 \Phi(p) = \int_0^p \frac{1}{\sqrt{2\pi}}e^{-\frac{1}{2}x^2}dx
-$$ We can plot using `curve(qnorm(x),from = 0, to = 1, lwd = 2)`
+$$ 
+
+We can plot using `curve(qnorm(x),from = 0, to = 1, lwd = 2)`
 
 ``` r
 curve(qnorm(x),from = 0, to = 1, lwd = 2)
 ```
 
-![](D:/git/ucx-stat/probit_files/figure-gfm/probit%20plot-1.png)<!-- -->
+![](probit_files/figure-gfm/probit%20plot-1.png)<!-- -->
 
 while logit looks like:
 
@@ -23,7 +25,7 @@ while logit looks like:
 curve(log(x/(1-x)), from = 0, to = 1, lwd = 2, ylab = "logit")
 ```
 
-![](D:/git/ucx-stat/probit_files/figure-gfm/plot%20logit-1.png)<!-- -->
+![](probit_files/figure-gfm/plot%20logit-1.png)<!-- -->
 
 plotting both together makes:
 
@@ -34,7 +36,7 @@ legend(x = 0.02, y = 2, legend = c("probit","logit"), col = c("salmon","blue"), 
 title("probit vs logit curves")
 ```
 
-![](D:/git/ucx-stat/probit_files/figure-gfm/plot%20together-1.png)<!-- -->
+![](probit_files/figure-gfm/plot%20together-1.png)<!-- -->
 
 ## Repeating the ANCOVA
 
@@ -226,10 +228,9 @@ table(df$Win,predict(m,type = "response")>.5,dnn = list("Actual","Predicted"))
 
 ``` r
 #AER probit
-cat("\nAER probit\n")
+cat("AER probit\n")
 ```
 
-    ## 
     ## AER probit
 
 ``` r
@@ -277,13 +278,14 @@ anova(p,update(p,.~TeamScore),test="Chisq")
   probit model.
 
 What method can be used to compare the two models with different link
-functions? - Since the response is the same, we can use AIC to compare
+functions
+ - Since the response is the same, we can use AIC to compare
 between models. Also, AER can also be used to compare since it measures
 the correctness of the models.
 
-Which model is statistically better? - From the AIC (the lesser, the
-better), we can state that probit model is better
-($873.1000532<877.295919)$.
+Which model is statistically better?
+ - From the AIC (the lesser, the better), we can state that probit model is better
+($873.1000532<877.295919$).
 
 What is the AIC for the GLM with the probit link function? - AIC of the
 probit link function is 873.1000532 for additive model and 873.1000532
@@ -305,6 +307,6 @@ legend(x = 0.02, y= 0.975,
        lty = c(2,1))
 ```
 
-![](D:/git/ucx-stat/probit_files/figure-gfm/curve%20plot-1.png)<!-- -->
+![](probit_files/figure-gfm/curve%20plot-1.png)<!-- -->
 
 - They look almost the same.

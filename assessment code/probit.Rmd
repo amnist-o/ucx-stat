@@ -5,7 +5,7 @@ output: github_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, fig.path = "D:/git/ucx-stat/probit_files/figure-gfm/")
+knitr::opts_chunk$set(echo = TRUE, fig.path = "probit_files/figure-gfm/")
 ```
 
 ## Assessment
@@ -14,6 +14,7 @@ There is another link function: probit. Probit is an inverse of the standard cum
 $$
 \Phi(p) = \int_0^p \frac{1}{\sqrt{2\pi}}e^{-\frac{1}{2}x^2}dx
 $$
+
 We can plot using `curve(qnorm(x),from = 0, to = 1, lwd = 2)`
 ```{r probit plot}
 curve(qnorm(x),from = 0, to = 1, lwd = 2)
@@ -53,7 +54,7 @@ table(df$Win,predict(m,type = "response")>.5,dnn = list("Actual","Predicted"))
 
 
 #AER probit
-cat("\nAER probit\n")
+cat("AER probit\n")
 table(df$Win,predict(p,type = "response")>.5,dnn = list("Actual","Predicted"))
 ```
 
@@ -66,13 +67,13 @@ anova(p,update(p,.~TeamScore),test="Chisq")
 
  - We can see from the ancova that the probability of winning does not depend on chaser after adjusting team score in both logit model and probit model.
 
-What method can be used to compare the two models with different link functions?
+What method can be used to compare the two models with different link functions?  
  - Since the response is the same, we can use AIC to compare between models. Also, AER can also be used to compare since it measures the correctness of the models.
 
-Which model is statistically better?
- - From the AIC (the lesser, the better), we can state that probit model is better ($`r AIC(p)`<`r AIC(m)`)$.
+Which model is statistically better?  
+ - From the AIC (the lesser, the better), we can state that probit model is better ($`r AIC(p)`<`r AIC(m)`$).
 
-What is the AIC for the GLM with the probit link function?
+What is the AIC for the GLM with the probit link function?  
  - AIC of the probit link function is `r AIC(p)` for additive model and `r AIC(update(p,.~TeamScore*Chaser))` for interaction model (question refers to interaction model).
 
 Plot the curves for chaser Anne based on both models
