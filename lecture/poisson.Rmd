@@ -37,7 +37,7 @@ d %>%
 
 Most people are in working age (25 - 40). Let's take a look at frequency of visits.
 
-```{r}
+```{r freq vs age}
 d %>%
   ggplot(aes(x=Age, y = Freq))+
   geom_point(aes(col = Gender, group = Gender))
@@ -127,5 +127,64 @@ m <- update(p,.~.+offset(log(duration)),
 summary(m)
 
 lapply(list(poisson = p,offset = m), AIC)
+```
+
+Now, let's create a plot for our new model:
+
+```{r new plot}
+d2 <- data.frame(Age = rep(15:95, each = 2),
+                 Gender = rep(c("F","M"),81),
+                 duration = 365)
+
+d2 %>%
+  bind_cols(predict(m,newdata = d2,
+                    type = "response",se.fit = T)) %>%
+  mutate(lo = fit - (1.96*se.fit),
+         hi = fit + (1.96*se.fit)) -> d2
+
+d2 %>%
+  ggplot(aes(x = Age, y = fit))+
+  geom_line(aes(group = Gender, col = Gender),linewidth = 1)+
+  geom_ribbon(aes(ymin = lo, ymax = hi, group = Gender, fill = Gender),alpha = .4) +
+  ylab("Estimated Mean Annual Frequency of Attendance")
+```
+
+Now that we have accounted for duration, is there anything left that we should consider to make a good model to predict the frequency of visits?  
+ - Frequency of visits include those who came once and never came back. So, to make the model meaningful, we should exclude said samples.
+
+```{r one visit}
+table(d$Freq==1, dnn = list("one visit"))
+```
+
+```{r filter out one visits}
+d1 %>%
+  mutate(return = Freq - 1,
+         duration = as.numeric(dmy("1/4/2016")-dmy(StartDate)),
+         duration = pmin(duration,365)) %>%
+  filter(return >0) -> d3
+
+m1 <- glm(return ~ Age*Gender+offset(log(duration)), data = d3,
+          family = "poisson"(link = "log"))
+
+summary(m1)
+```
+ 
+Now, let's plot the estimated mean annual frequency of return visits.
+
+```{r return plot}
+data.frame(Age = rep(15:95,each = 2),
+           Gender = rep(c("F","M"),81),
+           duration = 365) %>%
+  bind_cols(predict(m1,newdata = .,
+                    type = "response",se.fit = T)) %>%
+  mutate(lo = fit - (1.96*se.fit),
+         hi = fit + (1.96*se.fit)) -> d3.pred
+
+d3.pred %>%
+  ggplot(aes(x = Age, y = fit))+
+  geom_line(aes(group = Gender, col = Gender),linewidth = 1)+
+  geom_ribbon(aes(ymin = lo, ymax = hi, 
+                  group = Gender, fill = Gender), alpha = .4)+
+  ylab("Estimated Mean Annual Frequency of Return Visits.")
 ```
 

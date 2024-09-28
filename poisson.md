@@ -1,6 +1,6 @@
 Poisson regression
 ================
-2024-09-28
+2024-09-29
 
 ## Load packages and data
 
@@ -60,7 +60,7 @@ d %>%
   geom_point(aes(col = Gender, group = Gender))
 ```
 
-![](poisson_files/fig/unnamed-chunk-1-1.png)<!-- -->
+![](poisson_files/fig/freq%20vs%20age-1.png)<!-- -->
 
 Only take away with this graph is that there is a lot of variations. One
 of the sample visits almost 500 times. This is our outlier.
@@ -229,3 +229,95 @@ lapply(list(poisson = p,offset = m), AIC)
     ## 
     ## $offset
     ## [1] 329729.2
+
+Now, let’s create a plot for our new model:
+
+``` r
+d2 <- data.frame(Age = rep(15:95, each = 2),
+                 Gender = rep(c("F","M"),81),
+                 duration = 365)
+
+d2 %>%
+  bind_cols(predict(m,newdata = d2,
+                    type = "response",se.fit = T)) %>%
+  mutate(lo = fit - (1.96*se.fit),
+         hi = fit + (1.96*se.fit)) -> d2
+
+d2 %>%
+  ggplot(aes(x = Age, y = fit))+
+  geom_line(aes(group = Gender, col = Gender),linewidth = 1)+
+  geom_ribbon(aes(ymin = lo, ymax = hi, group = Gender, fill = Gender),alpha = .4) +
+  ylab("Estimated Mean Annual Frequency of Attendance")
+```
+
+![](poisson_files/fig/new%20plot-1.png)<!-- -->
+
+Now that we have accounted for duration, is there anything left that we
+should consider to make a good model to predict the frequency of
+visits?  
+- Frequency of visits include those who came once and never came back.
+So, to make the model meaningful, we should exclude said samples.
+
+``` r
+table(d$Freq==1, dnn = list("one visit"))
+```
+
+    ## one visit
+    ## FALSE  TRUE 
+    ## 12829  6270
+
+``` r
+d1 %>%
+  mutate(return = Freq - 1,
+         duration = as.numeric(dmy("1/4/2016")-dmy(StartDate)),
+         duration = pmin(duration,365)) %>%
+  filter(return >0) -> d3
+
+m1 <- glm(return ~ Age*Gender+offset(log(duration)), data = d3,
+          family = "poisson"(link = "log"))
+
+summary(m1)
+```
+
+    ## 
+    ## Call:
+    ## glm(formula = return ~ Age * Gender + offset(log(duration)), 
+    ##     family = poisson(link = "log"), data = d3)
+    ## 
+    ## Coefficients:
+    ##               Estimate Std. Error z value Pr(>|z|)    
+    ## (Intercept) -4.5954330  0.0117476 -391.18   <2e-16 ***
+    ## Age          0.0244169  0.0002391  102.13   <2e-16 ***
+    ## GenderM      0.6410916  0.0156416   40.99   <2e-16 ***
+    ## Age:GenderM -0.0040306  0.0003153  -12.78   <2e-16 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## (Dispersion parameter for poisson family taken to be 1)
+    ## 
+    ##     Null deviance: 232545  on 12827  degrees of freedom
+    ## Residual deviance: 204840  on 12824  degrees of freedom
+    ## AIC: 248789
+    ## 
+    ## Number of Fisher Scoring iterations: 6
+
+Now, let’s plot the estimated mean annual frequency of return visits.
+
+``` r
+data.frame(Age = rep(15:95,each = 2),
+           Gender = rep(c("F","M"),81),
+           duration = 365) %>%
+  bind_cols(predict(m1,newdata = .,
+                    type = "response",se.fit = T)) %>%
+  mutate(lo = fit - (1.96*se.fit),
+         hi = fit + (1.96*se.fit)) -> d3.pred
+
+d3.pred %>%
+  ggplot(aes(x = Age, y = fit))+
+  geom_line(aes(group = Gender, col = Gender),linewidth = 1)+
+  geom_ribbon(aes(ymin = lo, ymax = hi, 
+                  group = Gender, fill = Gender), alpha = .4)+
+  ylab("Estimated Mean Annual Frequency of Return Visits.")
+```
+
+![](poisson_files/fig/return%20plot-1.png)<!-- -->

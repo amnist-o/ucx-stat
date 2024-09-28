@@ -1,0 +1,66 @@
+---
+title: "Poisson assessment"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.path = "poisson_files/fig-assessment/")
+```
+
+## Assessment
+Let’s continue analysing LLGA data. Let’s include body mass index (BMI) into our modeling. It is only available for a small subset of people though, so let’s make our dataset smaller:
+
+```{r library and data, message=FALSE}
+library(tidyverse)
+df <- read.csv("datasets/LLGA.csv",stringsAsFactors = T)
+df %>%
+  mutate(# only return
+         return = Freq -1,
+         # change duration to 1 year and less
+         duration = as.numeric(dmy("1/4/2016")-dmy(StartDate)),
+         duration = pmin(duration, 365)) %>%
+  filter(return >0,
+         duration >0,
+         !is.na(BMI),
+         Gender %in% c('F','M')) -> d
+
+summary(d)
+```
+
+Check whether there is an affect of BMI on attendance after adjusting for age and gender. Do not forget to include the duration as an offset, and start with the most complex model:
+`m2 <- glm(I(Freq - 1) ~ BMI*Age*Gender+offset(log(duration)),
+data = d, family = "poisson"(link = "log))`
+
+```{r model}
+m <- glm(return ~ BMI*Age*Gender+offset(log(duration)),
+         data = d,
+         family = "poisson"(link = "log"))
+summary(m)
+```
+
+Use this model to produce and plot predictions for the return visit frequency for  
+ - 45 years old male with various values of BMI  
+ - 75 years old female with various values of BMI
+ 
+```{r prediction and plot}
+data.frame(BMI = rep(15:35,each = 2),
+           Gender = rep(c("F","M"),21),
+           duration = 365) %>%
+  mutate(Age = ifelse(Gender == "F",75,45),.before = 1) %>%
+  bind_cols(predict(m,newdata = .,
+                    type = "response",
+                    se.fit = T)) %>%
+  select(-residual.scale) %>%
+  mutate(lo = fit - (1.96*se.fit),
+         hi = fit + (1.96*se.fit)) -> d.pred
+
+d.pred %>%
+  ggplot(aes(x = BMI, y = fit))+
+  geom_line(aes(group = Gender, col = Gender),linewidth = 1)+
+  geom_ribbon(aes(ymin = lo, ymax = hi,
+                  group = Gender, fill = Gender),
+              alpha = .4)
+```
+ 
+The results may be explained by that the time 45 years old male have to spend is less than 75 years old female. On the other hand, 75 years old female might not be able to visit the place that often and the result is due to high visits in younger age.
