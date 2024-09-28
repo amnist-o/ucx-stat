@@ -1,0 +1,131 @@
+---
+title: "Poisson regression"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.path = "poisson_files/fig/")
+```
+
+## Load packages and data
+```{r load packages and data, message=FALSE}
+library(tidyverse)
+df <- read.csv(file = "datasets/LLGA.csv")
+head(df)
+```
+
+The study looked at the possible effect of the environment on attendance of various sports facilities. This simplified dataset contains information on gender and age of the participants, the dates they started their participation (i.e., their first visit), the body mass index for some of them, and the number of times (Freq) they visited the sports facilities during the study period (April 2015 – March 2016).
+
+## Exploratory analysis
+Let's see if the number of visits correlated with gender and age. First, take a look at the demographic
+
+```{r demographic}
+table(df$Gender)
+```
+
+There is 1 missing value and 42 unknowns. Let's omit these response.
+
+```{r filter data}
+df %>%
+  filter(Gender %in% c("F","M")) -> d
+
+d %>%
+  ggplot(aes(x=Age))+
+  geom_density(aes(fill = Gender,group = Gender, col = Gender),alpha = .4)
+```
+
+Most people are in working age (25 - 40). Let's take a look at frequency of visits.
+
+```{r}
+d %>%
+  ggplot(aes(x=Age, y = Freq))+
+  geom_point(aes(col = Gender, group = Gender))
+```
+
+Only take away with this graph is that there is a lot of variations. One of the sample visits almost 500 times. This is our outlier.
+
+## Fitting poisson regression
+Fitting poisson regression require family parameter and link function (log).
+
+```{r model}
+p <- glm(Freq ~ Gender*Age, data = d, 
+         family = "poisson"(link = "log"))
+summary(p)
+```
+
+With this large amount of data, everything is significant as expected. We can interpret the model as:  
+For women, additional of age is associated with an average of $e^{0.026}-1 = `r scales::percent(exp(0.026)-1,0.01)`$ increase in frequency of visit.  
+For men, the correlation between age and frequency is 0.17% smaller (coefficient of the interaction terms).
+
+Does the relationship differ by gender? Let's compare the model with out gender.
+
+```{r model compare}
+anova(update(p,.~Age),p,test = "Chisq")
+```
+
+The difference is significant. We can say that the relationship is different on each gender.
+
+## Plotting the fit
+We can use predict to fit the curve of the model.
+
+```{r plot}
+d.pred <- data.frame(Age = rep(15:95,each = 2),Gender = rep(c("F","M"),81)) %>%
+  cbind(predict(p,newdata = list(Age = rep(15:95,each = 2),
+                                 Gender = rep(c("F","M"),81)),
+                type = "response",
+                se.fit = T)) %>%
+  select(-residual.scale) %>%
+  mutate(lo = fit-(1.96*se.fit),
+         hi = fit+(1.96*se.fit))
+
+d.pred %>%
+  ggplot(aes(x = Age, y = fit))+
+  geom_line(aes(group = Gender, colour = Gender),linewidth = 1.5)
+
+d.pred |> 
+  ggplot(aes(x=Age , y=fit))+
+  geom_line(aes(group = Gender , col = Gender),linewidth = 1.2)+
+  geom_ribbon(aes(ymin = lo, ymax=hi,group=Gender, fill = Gender),alpha=.4)
+```
+
+## Offset
+The total frequency is collected at 1st April 2016. By this fact, the frequency is offset by duration of participation. Our model should account for this. Thus it should change from
+
+$$
+Y_i\sim Pois(\mu_i)
+$$
+
+to:
+
+$$
+Y_i\sim Pois(\mu_{d_i},N_{d_i})
+$$
+
+where $\mu_{d_i}$ is the daily frequency of visits and $N_{d_i}$ is the total number of days available for visits. We can model the intensity parameters as:
+
+$$
+\log(\mu_{i})=\log(\mu_{d_i})+\log(N_{d_i})=\beta_0+\beta_1X_{1i}+\ldots+\log(N_{d_i})
+$$
+
+$\log(N_{d_i})$ has a coefficient of 1 so we called it an offset.
+
+We need to calculate the values of this variable:
+
+```{r duration}
+d %>%
+  mutate(duration = days(dmy("1/4/2016")-dmy(StartDate)),
+         duration = pmin(as.numeric(duration),365)) %>% 
+  filter(duration >0) ->d1
+```
+
+Now, let's make a new model:
+
+```{r offset model}
+m <- update(p,.~.+offset(log(duration)),
+            data = d1, family = "poisson"(link = "log"))
+summary(m)
+
+lapply(list(poisson = p,offset = m), AIC)
+```
+
