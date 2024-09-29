@@ -1,0 +1,134 @@
+---
+title: "Paired test"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Consider a data set with variables $G$, $Y$, and $PID$. Let $G$ be a binary variable such that $G_i = 0$ or $G_i = 1$ for depending on which group the observation $i$ belongs to. Let $PID$ be the personal ID of the participant to which the observation $i$ refers. And, finally, let $Y_i$ be the response recorded for the observation $i$ (For the person $PID_i$ belonging to the group $G_i$).
+
+Performing a simple t-test (with the assumption of equal variance) is equivalent to fitting a simple linear regression with response $Y$ and a single binary covariate $G$, and testing the coefficient of $G$.
+
+Use the file BPData.csv to give it a go.
+
+```{r load packages and data , message=FALSE}
+library(tidyverse)
+df <- read.csv("datasets/BPdata.csv")
+# check whether has separated
+head(df)
+```
+
+```{r model}
+m <- lm(BP ~ Group, data = df)
+summary(m)
+t.test(BP ~ Group , data = df, var.equal = T)
+```
+
+This simple regression assumes that:
+
+$$
+Y_i = a+bX_i+\varepsilon_i
+$$
+
+where
+
+$$
+\varepsilon_i \sim N(0,\sigma^2)
+$$
+However, blood pressure test measurement might vary between participants. We call this mixed effect. The model is:
+
+$$
+Y_i = a+bX_i+\xi_{PID_i} + \varepsilon_i
+$$
+
+The participant error term $\xi_{PID_i}$ is distributed as:
+
+$$
+\xi_{PID} \sim N(0,\omega^2)
+$$
+
+The $\varepsilon_i$ is still the same. Now, the expected Y given X has to take account for participant error. Thus, the variance is then:
+
+$$
+Var(Y|X)=Var(a+bX^*+\xi_{PID_i}+\varepsilon_i)=\omega^2+\sigma^2
+$$
+
+Let's try to fit the model. We are going to use `lme4` and `lmerTest` for the mixed effect model.
+
+```{r load package and create mixed effect model, message=FALSE}
+library(lme4)
+library(lmerTest)
+
+m1 <- lmer(BP ~ Group + (1|PID), data = df)
+summary(m1)
+```
+
+The data set is very small. We cannot see much of the difference.
+
+## Repeated measures ANOVA
+If we want to compare means of more than two groups, we use ANOVA. In this case, we can use repeated ANOVA to compare the means rather than paired - t-test.
+
+```{r ranova}
+ed <- read.csv("datasets/eucalyptus.csv")
+head(ed)
+```
+
+In this dataset, we have information on the height(`hgt`), the species (`spp`), and the `stocking` density. If we want to know whether the tree height depends on the planting density (`stocking`) and species, we need to account for the `plot`.
+
+Our model should be:
+
+$$
+H = \mu_{spp_i,stocking_i}+\xi_{plot_i}+\varepsilon_i
+$$
+
+Let's try to fit the model.
+
+## Height model
+
+```{r ed model}
+ed$stocking <- factor(ed$stocking)
+
+m1 <- lmer(hgt ~ spp*stocking + (1|plot), data = ed)
+m0 <- lmer(hgt ~ spp + (1|plot), data = ed)
+anova(m1,m0)
+```
+
+Seems like the stocking has a statistically significant effect on average tree heights.
+
+Let's look at the variance of model 1
+
+```{r summary m1}
+summary(m1)
+ranef(m1)
+```
+
+Look at the variance of the plot in random effect. If it is near 0, we can say that the plots are pretty much identical. However, in this case, the variance of the plot is around `r scales::percent(0.69359/(0.69359+1.16566),.01)` which is quite high.
+
+## Diagnostics
+Let's diagnose the model. We want equal variance and normal distribution for both residuals and random effects.
+
+```{r diagnostic}
+# check variance with plot
+plot(m1)
+
+# check normality with qqplot
+par(mfrow = c(1,2))
+qqnorm(resid(m1))
+qqline(resid(m1),col = "salmon")
+
+qqnorm(c(unlist(ranef(m1)$plot)))
+qqline(c(unlist(ranef(m1)$plot)), col = "salmon")
+```
+
+## Comparison with no random effects
+Let's check the model with no random effects:
+
+```{r no random model}
+m1s <- lm(hgt ~ spp*stocking, data = ed)
+m0s <- lm(hgt ~ spp, data = ed)
+anova(m1s,m0s)
+```
+
+In this case, the result is similar.

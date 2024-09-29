@@ -1,0 +1,43 @@
+---
+title: "Repeated Measures ANOVA"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Assessment
+ - Load the eucalyptus.csv data and repeat the analysis of the previous section with the diameter at breast height `dbh` rather than height `hgt` as the response variable.
+
+```{r load packages and data, message=FALSE}
+library(tidyverse)
+library(lme4)
+library(lmerTest)
+# load data
+df <- read.csv("datasets/eucalyptus.csv")
+df$stocking <- factor(df$stocking)
+```
+
+```{r model adjust for species}
+m <- lmer(dbh ~ spp*stocking + (1|plot), data = df)
+m1 <- lmer(dbh ~ stocking + (1|plot), data = df)
+anova(m,m1)
+```
+
+The anova test shows that the effect of stocking is statistically significant on dbh after adjusting for species.
+
+```{r adjsut for stocking}
+s <- lmer(dbh ~ spp+(1|plot),data = df)
+anova(m,s)
+```
+
+The anova test shows that the effect of species is statistically significant on dbh after adjusting for stocking.
+
+```{r stocking x species}
+m.add <- update(m,.~spp+stocking+(1|plot))
+anova(m,m.add)
+```
+
+The anova test shows that the effect of stocking differed by species. 

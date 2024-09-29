@@ -1,0 +1,54 @@
+---
+title: "Mixed effects generalised linear model"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Random effects in generalised linear model are sumply added to a link function:
+
+$$
+\text{logit}(p_i) = a + bX_i + \xi_{PID_i}
+$$
+
+where $X_i$ is 0 or 1 depending on whether the measurement was taken before or after the treatment.
+
+Even this is a binomial GLM, we still assumes that the $\xi$ have a normal distribution:
+
+$$
+\xi \sim N(0,\sigma_\xi^2)
+$$
+
+We can use `qqnorm` in order to check whether the actual $\xi$ is normally distributed.
+
+Let's try to fit a mixed effect glm.
+
+```{r load packages and data, message=FALSE}
+library(lme4)
+library(lmerTest)
+
+d <- data.frame(id = rep(1:5,2),x = rep(0:1,each = 5),
+                y = c(0,1,1,0,0,0,1,1,0,0))
+```
+
+```{r model}
+m <- glmer(y ~ x + (1|id), data = d,
+           family = "binomial"(link = "logit"))
+summary(m)
+```
+
+The output is similar to normal `lmer()`
+
+Now, let's plot random effects
+
+```{r plot}
+qqnorm(c(unlist(ranef(m)$id)))
+qqline(c(unlist(ranef(m)$id)))
+```
+
+Checking distribution of a model with 5 observations tells us nothing. However, we know what to write in order to attain the information.
+
+In GLM, whatever our family and link function are, random effects are added to the link function. Everything that applies to glms applies to mixed effects glm as well. This is the model that quite likely to use in real life practice.

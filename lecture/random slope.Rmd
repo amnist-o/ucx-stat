@@ -1,0 +1,122 @@
+---
+title: "Random Intercepts and Random Slopes"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Random effect with linear regression looks like this:
+
+$$
+Y_i=\beta_0+\beta_1X_{1i}+\beta_2X_{2i}+\ldots+\beta_kX_{ki}+\xi_{ID_i}+\varepsilon_i
+$$
+
+with $\xi$ as a random effect (ID specific)
+
+Let's use eucalypti data to fit a simple regression with stiffness as the response and dbh as the independent variable. For simplicity, use only `dun` species. We will add specific random effect plot to the diagnostic.
+
+```{r packages and data, message=FALSE}
+library(tidyverse)
+library(lme4)
+library(lmerTest)
+
+df <- read.csv("datasets/eucalyptus.csv")
+df %>%
+  mutate(stocking = factor(stocking)) %>%
+  filter(spp == "dun") -> df
+```
+
+```{r model}
+m <- lmer(Stiffness ~ dbh + (1|plot), data = df)
+summary(m)
+ranef(m)
+```
+
+The association between `dbh` and `Stiffness` is not significant. Inter-plot variation is substantial with about 25% of the unexplained variation. `ranef(m)` showed us the random effects.
+
+The word intercept means that the intercept is different for each plot. Since $\xi_{ID_i}+\beta_0$ will be calculated as intercept.
+
+Now let's make a plot
+
+```{r plot}
+d.pred <- expand.grid(dbh = seq(8,25,.1),
+                      plot=factor(unique(df$plot)))
+d.pred %>%
+  bind_cols(predict(m,newdata = d.pred,se.fit = T)) -> d.pred
+
+d.pred %>%
+  ggplot(aes(x=dbh, y=fit, group = plot))+
+  geom_line(aes(col = plot))+
+  xlab("dbh")+
+  ylab("Stiffness")
+```
+
+We get 12 lines for each plot and they are parallel. But what if slope of each plot is not the same
+
+## Random slopes
+We can fit a model with random slopes. Mathematically, it is:
+
+$$
+Y_i = (\beta_0+\xi_{ID_i})+(\beta_1+\omega_{ID_i}X_i+\varepsilon_i)
+$$
+
+This model can be fit with the following code:
+
+```{r random slope model}
+m.slope <- lmer(Stiffness ~ dbh + (dbh|plot),data = df)
+summary(m.slope)
+ranef(m.slope)
+```
+
+Now our random effects has intercept and dbh for plot and residuals. Note that variance of dbh is low relative to others. It means that the slopes do not seem to vary too much between plots.
+
+Random effect from `ranef` will have 2 values now. One for intercept and one for dbh.
+
+Let's plot it out:
+
+```{r random slope plot}
+d.pred %>%
+  select(-c(fit,se.fit)) %>%
+  bind_cols(predict(m.slope, newdata=.,se.fit = T)) -> d.pred
+
+d.pred %>%
+  ggplot(aes(x=dbh, y= fit, group = plot))+
+  geom_line(aes(col = plot))+
+  xlab("dbh")+
+  ylab("Stiffness")
+```
+
+Let's add a populaton average line to the plot:
+
+```{r random slope with pop mean}
+d.pred.pop <- expand.grid(dbh = seq(8,25,.1),
+                          plot= factor(unique(df$plot)))
+d.pred.pop %>%
+  mutate(fit = predict(m.slope,newdata = .,re.form = ~0)) -> d.pred.pop
+
+d.pred %>%
+  ggplot(aes(x = dbh, y = fit, group =plot))+
+  geom_line(aes(col = plot))+
+  geom_line(data = d.pred.pop, aes(x = dbh, y = fit), linewidth = 1.5)+
+  xlab("dbh")+
+  ylab("Stiffness")
+```
+
+## Testing for random slopes
+We can use AIC to check whether adding random slopes makes statistical sense:
+
+```{r aic check}
+lapply(list("random effect" = m,
+            "random slope" = m.slope), AIC)
+```
+
+AIC for random effect without random slope is lower, so no evidence for random slopes. We can use anova for the same test:
+
+```{r anova check}
+anova(m,m.slope)
+```
+
+ANOVA test also shows that the random slope is not statistically different to normal random effect.
