@@ -1,0 +1,99 @@
+---
+title: "Multinomial logit assessment"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Assessment: Nominal categorical GLM
+Repeat the analysis in this section (first, perform the 1-way ANOVA, then fit a multinomial logistic model) using the variable `crownarea` rather than the `hgt`.
+
+```{r load packages and data, message=FALSE}
+library(tidyverse)
+library(nnet)
+
+d <- read.csv(file = "datasets/eucalyptus.csv")
+anova(lm(crownarea ~ spp, data = d))
+```
+
+```{r model}
+m <- multinom(spp ~ crownarea, data = d)
+summary(m)
+```
+
+To test the coefficients, we model without the coefficient and compare both models with anova
+
+```{r compare coef}
+m0 <- multinom(spp ~ 1, data = d)
+anova(m0,m)
+lapply(list("no coef" = m0, coef = m), AIC)
+```
+
+It appears that there is a statistically significant difference between the two models. The crownarea of the tree does affect the probability of belonging to a particular species.
+
+## Plots
+Let's plot the result of multinomial:
+
+```{r plot}
+d.pred <- data.frame(crownarea = seq(8,200,1))
+
+matrix.prob <- predict(m,d.pred, type ="probs")
+
+d2 <- expand.grid(crownarea = seq(8,200,1),
+                  Species = c("clo","dun","pil"))
+
+d2$p <- c(matrix.prob)
+
+d2 %>%
+  ggplot(aes(x = crownarea, y = p, group = Species))+
+  geom_line(aes(col = Species),linewidth = 1.5)+
+  xlab("Crownarea")+
+  ylim(c(0,1))
+```
+
+Based on the graph, trees should be `dun` when the crownarea is more than around 50, `pil` when the crownarea is between 8 - 50, and `clo` otherwise.
+
+## Goodness of fit
+We can check the goodness of fit of the model with apparent error ratio (AER). Let's start by recording the predicted values and creating the *confusionn matrix*.
+
+```{r pred vs obs}
+pred <- predict(m)
+table(d$spp,pred)
+```
+
+The confusion matrix is a contingency table of observed vs. predicted data. The diagonal is the correctly predicted cases. Others are errors. So, we can get AER by $AER = \frac{error}{total}$.
+
+```{r aer}
+scales::percent(mean(pred != d$spp),.01)
+```
+
+## Alternative models
+Now try using a transformation of the crownarea, such as $\log()$ or a square root.
+
+Try a model with both, crownarea and hgt, and their interaction.
+
+Is your AER for that model better than for the crownarea-only one?
+
+```{r alternative models}
+m.int <- multinom(spp ~ crownarea*hgt, data = d)
+m.add <- multinom(spp ~ crownarea+hgt, data = d)
+m.log <- update(m,.~log(.))
+m.sqrt <- update(m,.~sqrt(.))
+
+aer <- function(m, df) {
+  pred <- predict(m)
+  table(df$spp, pred)
+  result <- mean(pred != df$spp)
+  return(result)
+}
+
+lapply(list(base = m,
+            log = m.log,
+            sqrt = m.sqrt,
+            add = m.add,
+            int = m.int), aer,d)
+```
+
