@@ -1,0 +1,81 @@
+---
+title: "Ordered logit assessment"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Assessment
+Use the lego dataset to test whether the effect of age on the assigned strength of emotion is modified by the sex of the participant.
+
+```{r load packages and data, message=FALSE}
+library(tidyverse)
+library(MASS)
+
+d <- read.csv("datasets/lego.csv")
+d$strength <- factor(d$strength,ordered = T)
+summary(d)
+```
+
+```{r model}
+m.add <- polr(strength ~ age+sex, data = d,subset = !is.na(age))
+m.int <- update(m.add,.~age*sex)
+anova(m.add,m.int)
+```
+
+In other words are the models strength ~ age*sex and strength ~ age+sex statitsically significantly different?  
+ - From the anova, the models are not statistically significantly different.
+
+
+ Use the model output to produce the plot of the cumulative probabilities for each strength category by age and sex.
+
+```{r plot}
+expit <- function(x){1/(1+exp(-(x)))}
+
+par(mfrow=c(1,2))
+# male
+curve(expit(m.int$zeta[1]+coef(m.int)[1]*x+coef(m.int)[2]+coef(m.int)[3]*x),
+      from=0,to=100,col='purple',
+      ylim=c(0,1),xlab='Age',ylab='Pr', main = "male")
+curve(expit(m.int$zeta[2]+coef(m.int)[1]*x+coef(m.int)[2]+coef(m.int)[3]*x),
+      from=0,to=100,col='cornflowerblue',add=T)
+curve(expit(m.int$zeta[3]+coef(m.int)[1]*x+coef(m.int)[2]+coef(m.int)[3]*x),
+      from=0,to=100,col='lawngreen',add=T)
+curve(expit(m.int$zeta[4]+coef(m.int)[1]*x+coef(m.int)[2]+coef(m.int)[3]*x),
+      from=0,to=100,col='orange',add=T)
+abline(h=0, col='sienna'); abline(h=1, col='sienna')
+
+# female
+curve(expit(m.int$zeta[1]+coef(m.int)[1]*x),
+      from=0,to=100,col='purple',
+      ylim=c(0,1),xlab='Age',ylab='Pr', main = "female")
+curve(expit(m.int$zeta[2]+coef(m.int)[1]*x),
+      from=0,to=100,col='cornflowerblue',add=T)
+curve(expit(m.int$zeta[3]+coef(m.int)[1]*x),
+      from=0,to=100,col='lawngreen',add=T)
+curve(expit(m.int$zeta[4]+coef(m.int)[1]*x),
+      from=0,to=100,col='orange',add=T)
+abline(h=0, col='sienna'); abline(h=1, col='sienna')
+
+```
+
+Produce the confusion matrix. What do you think about the fit of your model? Is it a good/useful model?
+
+```{r confusion matrix}
+pred <- predict(m.int)
+table(m.int$model$strength,pred, dnn = list("Actual","Predicted"))
+mean(as.numeric(pred) != as.numeric(m.int$model$strength))
+```
+
+The model is pretty bad. It cannot predict other strength other than 2. The error rate is 73.38%.
+
+Based on your modeling, what is the probability that a 40 year-old man will assign an emotion of random lego figurine into the maximum strength (5) category?
+
+```{r prob}
+predict(m.int,newdata=data.frame(age = 40,sex = "M"), type = "probs")
+```
+
+According to the model, the probability of a 40 year-old man assigning an emotion of random lego figurine into emotion strength of 5 is `r scales::percent(predict(m.int,newdata=data.frame(age=40,sex="M"),type="probs")[5],.01)`.
